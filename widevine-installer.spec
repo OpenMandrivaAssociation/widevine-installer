@@ -60,7 +60,7 @@ DESTDIR="%{buildroot}" ./widevine-installer --distinstall
 %dir %{_libdir}/firefox/defaults
 %dir %{_libdir}/firefox/defaults/pref
 %{_libdir}/firefox/defaults/pref/gmpwidevine.js
-#{_environmentdir}/50-gmpwidevine.conf
+%{_sysconfdir}/profile.d/gmpwidevine.sh
 #dir %{_sharedstatedir}/widevine
 %dir %ghost %{_sharedstatedir}/widevine/gmp-widevinecdm
 %dir %ghost %{_sharedstatedir}/widevine/gmp-widevinecdm/system-installed
@@ -69,7 +69,7 @@ DESTDIR="%{buildroot}" ./widevine-installer --distinstall
 %ghost %{_sharedstatedir}/widevine/libwidevinecdm.so
 %ghost %{_sharedstatedir}/widevine/LICENSE
 %ghost %{_sharedstatedir}/widevine/manifest.json
-#{_sharedstatedir}/widevine/README
+/var/lib/widevine/README
 %dir %ghost %{_sharedstatedir}/widevine/WidevineCdm
 %ghost %{_sharedstatedir}/widevine/WidevineCdm/manifest.json
 %dir %ghost %{_sharedstatedir}/widevine/WidevineCdm/_platform_specific
