@@ -3,7 +3,7 @@
 
 Name:           widevine-installer
 Version:        0^%{git}
-Release:        %autorelease
+Release:        1
 Summary:        Widevine CDM installer for aarch64 systems
 
 License:        MIT
@@ -51,7 +51,7 @@ DESTDIR="%{buildroot}" ./widevine-installer --distinstall
 
 %files
 %license LICENSE
-%doc README.md
+#doc README.md
 %{_bindir}/%{name}
 %{_libexecdir}/%{name}/
 %dir %{_libdir}/chromium-browser
@@ -60,8 +60,8 @@ DESTDIR="%{buildroot}" ./widevine-installer --distinstall
 %dir %{_libdir}/firefox/defaults
 %dir %{_libdir}/firefox/defaults/pref
 %{_libdir}/firefox/defaults/pref/gmpwidevine.js
-%{_environmentdir}/50-gmpwidevine.conf
-%dir %{_sharedstatedir}/widevine
+#{_environmentdir}/50-gmpwidevine.conf
+#dir %{_sharedstatedir}/widevine
 %dir %ghost %{_sharedstatedir}/widevine/gmp-widevinecdm
 %dir %ghost %{_sharedstatedir}/widevine/gmp-widevinecdm/system-installed
 %ghost %{_sharedstatedir}/widevine/gmp-widevinecdm/system-installed/libwidevinecdm.so
