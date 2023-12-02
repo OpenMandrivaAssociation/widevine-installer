@@ -51,7 +51,7 @@ DESTDIR="%{buildroot}" ./widevine-installer --distinstall
 
 %files
 %license LICENSE
-#doc README.md
+%doc README.md
 %{_bindir}/%{name}
 %{_libexecdir}/%{name}/
 %dir %{_libdir}/chromium-browser
