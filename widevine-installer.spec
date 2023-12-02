@@ -1,39 +1,34 @@
-%global date 20231031
-%global commit 8fa12dd2d81c4b5d2a713e169cac70898512322e
-%global shortcommit %(c=%{commit}; echo ${c:0:7})
+%global git 20231126
 %global debug_package %{nil}
 
 Name:           widevine-installer
-Version:        0^%{date}git%{shortcommit}
+Version:        0^%{git}
 Release:        %autorelease
 Summary:        Widevine CDM installer for aarch64 systems
 
 License:        MIT
 URL:            https://github.com/AsahiLinux/widevine-installer
-Source:         %{url}/archive/%{commit}/%{name}-%{commit}.tar.gz
-# Use /var/lib instead of /opt
-Patch:          %{url}/pull/2.patch
-# Use environment.d instead of the bash profile
-Patch:          %{url}/pull/5.patch
+Source0:        %{name}-1.%{git}.tar.xz
+#Source:         %{url}/archive/%{commit}/%{name}-%{commit}.tar.gz
 
 BuildRequires:  bash
 BuildRequires:  coreutils
-BuildRequires:  systemd-rpm-macros
+#BuildRequires:  systemd-rpm-macros
 BuildRequires:  sed
 
 Requires:       bash
 Requires:       coreutils
 Requires:       curl
 Requires:       glibc >= 2.36
-Requires:       python3
+Requires:       python
 Requires:       setup
 Requires:       squashfs-tools
 Requires:       systemd
 
-Enhances:       chromium
+#Enhances:       chromium
 Enhances:       firefox
-Enhances:       qt5-webengine
-Enhances:       qt6-webengine
+#Enhances:       qt5-webengine
+#Enhances:       qt6-webengine
 
 ExclusiveArch:  aarch64
 
@@ -43,7 +38,7 @@ performs the necessary configuration changes to make Widevine available for
 both Firefox and Chromium-based browsers.
 
 %prep
-%autosetup -p1 -n %{name}-%{commit}
+%autosetup -p1 -n %{name}-1.%{git}
 
 # Configs are already installed by the package
 sed -i 's/COPY_CONFIGS=1/COPY_CONFIGS=0/' widevine-installer
@@ -82,6 +77,3 @@ DESTDIR="%{buildroot}" ./widevine-installer --distinstall
 %ghost %{_sharedstatedir}/widevine/WidevineCdm/_platform_specific/linux_arm64/libwidevinecdm.so
 %dir %ghost %{_sharedstatedir}/widevine/WidevineCdm/_platform_specific/linux_x64
 %ghost %{_sharedstatedir}/widevine/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so
-
-%changelog
-%autochangelog
