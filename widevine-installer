@@ -1,0 +1,144 @@
+#!/bin/sh
+
+ARCH="$(uname -m)"
+VERBOSE=false
+KEEP=false
+VERSION=latest
+FALLBACK=true
+
+while getopts "a:d:fFkvV:" opt; do
+	case $opt in
+	a)
+		ARCH="$OPTARG"
+		;;
+	d)
+		DESTINATION="$OPTARG"
+		;;
+	f)
+		FALLBACK=true
+		;;
+	F)
+		FALLBACK=false
+		;;
+	k)
+		KEEP=true
+		;;
+	v)
+		VERBOSE=true
+		;;
+	V)
+		VERSION="$OPTARG"
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+if [ -z "$DESTINATION" ]; then
+	if [ -w /opt/widevine/libwidevinecdm.so ]; then
+		DESTINATION="/opt/widevine"
+	elif [ ! -e /opt/widevine/libwidevinecdm.so -a -w /opt/widevine ]; then
+		DESTINATION="/opt/widevine"
+	elif [ ! -e /opt/widevine -a -w /opt ]; then
+		DESTINATION="/opt/widevine"
+	else
+		DESTINATION="$(realpath ~/.local/lib)"
+	fi
+fi
+
+verbose() {
+	$VERBOSE && echo "$@"
+}
+
+TEMPDIR="$(mktemp -d /tmp/widevineXXXXXX)"
+if [ -z "$TEMPDIR" ]; then
+	echo "Couldn't create temporary directory -- mktemp missing?" >&2
+	exit 1
+fi
+cleanup() {
+	if ! $KEEP; then
+		cd /
+		rm -rf "$TEMPDIR"
+	else
+		echo "Temporary files are left in $TEMPDIR"
+	fi
+}
+trap "cleanup" EXIT
+cd "$TEMPDIR"
+
+case $ARCH in
+x86_64)
+	KNOWNGOOD=4.10.2710.0
+	if [ "$VERSION" = "latest" ]; then
+		VERSION="$(curl -s https://dl.google.com/widevine-cdm/versions.txt |sort -V |tail -n1)" 
+	elif [ "$VERSION" = "knowngood" ]; then
+		VERSION="${KNOWNGOOD}"
+	fi
+	verbose "Trying to download Widevine ${VERSION}"
+	curl -s -o widevine.zip "https://dl.google.com/widevine-cdm/${VERSION}-linux-x64.zip"
+	if ! tar xf widevine.zip; then
+		FAILED=true
+		if $FALLBACK && [ "${KNOWNGOOD}" != "${VERSION}" ]; then
+			verbose "Requested version failed to download, trying ${KNOWNGOOD}"
+			rm -f widevine.zip &>/dev/null
+			curl -s -o widevine.zip "https://dl.google.com/widevine-cdm/${KNOWNGOOD}-linux-x64.zip"
+			tar xf widevine.zip && FAILED=false
+		fi
+		if $FAILED; then
+			echo "Failed to download widevine binaries."
+			exit 1
+		fi
+	fi
+	if [ ! -e libwidevinecdm.so ]; then
+		echo "Widevine didn't contain libwidevinecmd.so - has the file name changed?" >&2
+		exit 1
+	fi
+	chmod 0755 libwidevinecdm.so
+	mkdir -p "${DESTINATION}"
+	if ! mv -f libwidevinecdm.so "${DESTINATION}"; then
+		echo "Failed to install libwidevinecdm.so to ${DESTINATION}." >&2
+		echo "Make sure you have sufficient permissions." >&2
+		exit 1
+	fi
+	verbose "Installed Widevine to ${DESTINATION}."
+	exit 0
+	;;
+aarch64)
+	KNOWNGOOD=126.0.6469.0
+	if [ "$VERSION" = "latest" ]; then
+		VERSION="$(curl -s 'https://chromiumdash.appspot.com/fetch_releases' |sed -e 's|},|},\n|g' |grep '"platform":"Lacros"' |sed -e 's,.*"version":",,;s,".*,,' |sort -V |tail -n1)"
+	elif [ "$VERSION" = "knowngood" ]; then
+		VERSION="${KNOWNGOOD}"
+	fi
+	verbose "Trying to download Lacros ${VERSION}"
+	curl -s -o lacros.squashfs "https://commondatastorage.googleapis.com/chromeos-localmirror/distfiles/chromeos-lacros-arm64-squash-zstd-${VERSION}"
+	set -x
+	if ! unsquashfs -d . lacros.squashfs WidevineCdm/_platform_specific/cros_arm64/libwidevinecdm.so; then
+		FAILED=true
+		if $FALLBACK && [ "${KNOWNGOOD}" != "${VERSION}" ]; then
+			verbose "Requested version failed to download, trying ${KNOWNGOOD}"
+			rm -f lacros.squashfs &>/dev/null
+			curl -s -o lacros.squashfs "https://commondatastorage.googleapis.com/chromeos-localmirror/distfiles/chromeos-lacros-arm64-squash-zstd-${VERSION}"
+			unsquashfs -d . lacros.squashfs WidevineCdm/_platform_specific/cros_arm64/libwidevinecdm.so && FAILED=false
+		fi
+		if $FAILED; then
+			echo "Failed to download/extract lacros image."
+			exit 1
+		fi
+	fi
+	/usr/libexec/widevine_fixup.py WidevineCdm/_platform_specific/cros_arm64/libwidevinecdm.so
+	chmod 0755 WidevineCdm/_platform_specific/cros_arm64/libwidevinecdm.so
+	mkdir -p "${DESTINATION}"
+	if ! mv -f WidevineCdm/_platform_specific/cros_arm64/libwidevinecdm.so "${DESTINATION}"; then
+		echo "Failed to install libwidevinecdm.so to ${DESTINATION}." >&2
+		echo "Make sure you have sufficient permissions." >&2
+		exit 1
+	fi
+	verbose "Installed Widevine to ${DESTINATION}."
+	exit 0
+	;;
+*)
+	echo "Currently, $ARCH is unsupported. If there is a widevine version for this"
+	echo "architecture, please add it to the script and send a patch."
+	exit 1
+	;;
+esac
